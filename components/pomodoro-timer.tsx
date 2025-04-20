@@ -8,20 +8,6 @@ import { Play, Pause, RotateCcw, Coffee } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { usePilotPoints } from "@/hooks/use-pilot-points"
 import { useToast } from "@/hooks/use-toast"
-import { motion, AnimatePresence } from "framer-motion"
-
-const QUOTES = [
-  "The secret of getting ahead is getting started. – Mark Twain",
-  "It always seems impossible until it's done. – Nelson Mandela",
-  "Don't watch the clock; do what it does. Keep going. – Sam Levenson",
-  "The future depends on what you do today. – Mahatma Gandhi",
-  "You don't have to be great to start, but you have to start to be great. – Zig Ziglar",
-  "The only way to do great work is to love what you do. – Steve Jobs",
-  "Success is not final, failure is not fatal: It is the courage to continue that counts. – Winston Churchill",
-  "Believe you can and you're halfway there. – Theodore Roosevelt",
-  "Your time is limited, don't waste it living someone else's life. – Steve Jobs",
-  "The best way to predict the future is to create it. – Peter Drucker",
-]
 
 interface PomodoroSession {
   date: string
@@ -36,7 +22,6 @@ export function PomodoroTimer() {
   const [focusTime, setFocusTime] = useState(25)
   const [breakTime, setBreakTime] = useState(5)
   const [isSettingsOpen, setIsSettingsOpen] = useState(false)
-  const [quote, setQuote] = useState("")
   const [showQuote, setShowQuote] = useState(false)
   const [sessions, setSessions] = useState<PomodoroSession[]>([])
   const [todayFocusTime, setTodayFocusTime] = useState(0)
@@ -107,25 +92,29 @@ export function PomodoroTimer() {
 
               // Award points for completed focus session
               if (mode === "focus") {
-                addPoints(focusTime, `Completed ${focusTime} min focus session!`)
+                const pointsEarned = focusTime
+                addPoints(pointsEarned, `Completed ${focusTime} min focus session!`)
+
+                // Show toast notification
+                toast({
+                  title: "Session Complete!",
+                  description: `You earned ${pointsEarned} Pilot Points for your focus session.`,
+                })
+
+                // Check for milestone (60+ minutes of focus today)
+                if (todayFocusTime + duration >= 60 && todayFocusTime < 60) {
+                  addPoints(50, "Daily study milestone: 60+ minutes!")
+                  toast({
+                    title: "Study Milestone!",
+                    description: "You've studied for 60+ minutes today! +50 Pilot Points",
+                  })
+                }
               }
             }
 
             // Play sound
             const audio = new Audio("/sounds/bell.mp3")
             audio.play().catch((e) => console.error("Error playing sound:", e))
-
-            // Show quote at the end of a focus session
-            if (mode === "focus") {
-              const randomQuote = QUOTES[Math.floor(Math.random() * QUOTES.length)]
-              setQuote(randomQuote)
-              setShowQuote(true)
-
-              // Hide quote after 10 seconds
-              setTimeout(() => {
-                setShowQuote(false)
-              }, 10000)
-            }
 
             // Switch modes
             if (mode === "focus") {
@@ -154,7 +143,7 @@ export function PomodoroTimer() {
         clearInterval(intervalRef.current)
       }
     }
-  }, [isActive, mode, breakTime, focusTime, addPoints])
+  }, [isActive, mode, breakTime, focusTime, addPoints, todayFocusTime])
 
   // Reset timer when mode changes
   useEffect(() => {
@@ -193,9 +182,8 @@ export function PomodoroTimer() {
           }
         }}
       >
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="timer">Timer</TabsTrigger>
-          <TabsTrigger value="stats">Stats</TabsTrigger>
           <TabsTrigger value="settings">Settings</TabsTrigger>
         </TabsList>
 
@@ -269,57 +257,6 @@ export function PomodoroTimer() {
                 </>
               )}
             </Button>
-          </div>
-
-          {/* Motivational Quote */}
-          <AnimatePresence>
-            {showQuote && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                className="mt-8 text-center p-4 rounded-lg bg-accent"
-              >
-                <p className="italic text-sm">{quote}</p>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </TabsContent>
-
-        <TabsContent value="stats" className="space-y-6 py-4">
-          <div className="space-y-2">
-            <h3 className="text-lg font-medium">Today's Focus Time</h3>
-            <div className="flex items-center justify-between">
-              <span className="text-2xl font-bold">{todayFocusTime} min</span>
-            </div>
-            <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
-              <div
-                className="h-full bg-blue-500 rounded-full"
-                style={{ width: `${Math.min(100, (todayFocusTime / 120) * 100)}%` }}
-              ></div>
-            </div>
-            <p className="text-xs text-muted-foreground">Goal: 120 minutes</p>
-          </div>
-
-          <div className="space-y-2">
-            <h3 className="text-lg font-medium">Total Sessions</h3>
-            <div className="text-2xl font-bold">{totalSessions}</div>
-          </div>
-
-          <div className="space-y-2">
-            <h3 className="text-lg font-medium">Recent Sessions</h3>
-            <div className="space-y-2 max-h-40 overflow-y-auto">
-              {sessions
-                .slice(-5)
-                .reverse()
-                .map((session, i) => (
-                  <div key={i} className="flex justify-between items-center text-sm p-2 rounded bg-muted/50">
-                    <span>{session.type === "focus" ? "🎯 Focus" : "☕ Break"}</span>
-                    <span>{session.duration} min</span>
-                    <span className="text-xs text-muted-foreground">{session.date}</span>
-                  </div>
-                ))}
-            </div>
           </div>
         </TabsContent>
 

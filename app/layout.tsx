@@ -5,7 +5,7 @@ import { ThemeProvider } from "@/components/theme-provider"
 import { UserProvider } from "@/context/user-context"
 import { PilotPointsProvider } from "@/hooks/use-pilot-points"
 import { Navbar } from "@/components/navbar"
-import { CustomCursor } from "@/components/custom-cursor"
+import { LightingCursor } from "@/components/lighting-cursor"
 import { Footer } from "@/components/footer"
 import "@/app/globals.css"
 
@@ -28,7 +28,7 @@ export default function RootLayout({
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
           <UserProvider>
             <PilotPointsProvider>
-              <CustomCursor />
+              <LightingCursor />
               <div className="flex min-h-screen flex-col">
                 <Navbar />
                 <main className="flex-1">{children}</main>

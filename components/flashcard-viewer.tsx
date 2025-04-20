@@ -1,15 +1,14 @@
 "use client"
 
-import { useState, useRef, useEffect } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { ChevronLeft, ChevronRight, RotateCw, RefreshCw } from "lucide-react"
-import { Canvas } from "@react-three/fiber"
-import { PresentationControls, Environment, Html } from "@react-three/drei"
 import { useToast } from "@/hooks/use-toast"
 import { extractJsonFromString } from "@/lib/extract-json"
 import { ExportTools } from "@/components/export-tools"
 import { usePilotPoints } from "@/hooks/use-pilot-points"
-import type * as THREE from "three"
+import { motion, AnimatePresence } from "framer-motion"
+import { Card, CardContent } from "@/components/ui/card"
 
 interface FlashcardViewerProps {
   studyText: string
@@ -181,32 +180,52 @@ export function FlashcardViewer({ studyText, onBack }: FlashcardViewerProps) {
         </div>
       </div>
 
-      <div className="relative mx-auto h-[400px] w-full max-w-2xl">
-        <Canvas dpr={[1, 2]} camera={{ position: [0, 0, 5], fov: 45 }}>
-          <ambientLight intensity={0.5} />
-          <PresentationControls
-            global
-            zoom={0.8}
-            rotation={[0, 0, 0]}
-            polar={[-Math.PI / 4, Math.PI / 4]}
-            azimuth={[-Math.PI / 4, Math.PI / 4]}
-          >
-            {flashcards.length > 0 && (
-              <FlashcardModel
-                isFlipped={isFlipped}
-                question={flashcards[currentIndex]?.question || ""}
-                answer={flashcards[currentIndex]?.answer || ""}
-              />
-            )}
-          </PresentationControls>
-          <Environment preset="apartment" />
-        </Canvas>
+      <div className="relative mx-auto w-full max-w-2xl">
+        <div className="perspective-1000 relative h-[400px] w-full">
+          <AnimatePresence initial={false} mode="wait">
+            <motion.div
+              key={`card-${currentIndex}-${isFlipped ? "back" : "front"}`}
+              initial={{ rotateY: isFlipped ? -180 : 0, opacity: 0 }}
+              animate={{ rotateY: isFlipped ? -180 : 0, opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.3 }}
+              className="absolute inset-0"
+            >
+              <Card className={`h-full w-full ${isFlipped ? "hidden" : "block"}`}>
+                <CardContent className="flex h-full flex-col items-center justify-center p-6">
+                  <div className="mb-4 text-lg font-semibold text-muted-foreground">Question</div>
+                  <div className="max-h-[280px] overflow-y-auto text-center text-xl">
+                    {flashcards[currentIndex]?.question || ""}
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
 
-        <div className="absolute bottom-4 left-1/2 flex -translate-x-1/2 transform gap-4">
+            <motion.div
+              key={`card-${currentIndex}-${isFlipped ? "front" : "back"}`}
+              initial={{ rotateY: isFlipped ? 0 : 180, opacity: 0 }}
+              animate={{ rotateY: isFlipped ? 0 : 180, opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.3 }}
+              className="absolute inset-0"
+            >
+              <Card className={`h-full w-full ${isFlipped ? "block" : "hidden"}`}>
+                <CardContent className="flex h-full flex-col items-center justify-center p-6 bg-blue-50 dark:bg-blue-900/20">
+                  <div className="mb-4 text-lg font-semibold text-muted-foreground">Answer</div>
+                  <div className="max-h-[280px] overflow-y-auto text-center text-xl">
+                    {flashcards[currentIndex]?.answer || ""}
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          </AnimatePresence>
+        </div>
+
+        <div className="mt-6 flex items-center justify-center gap-4">
           <Button variant="outline" size="icon" onClick={prevCard} disabled={currentIndex === 0}>
             <ChevronLeft className="h-4 w-4" />
           </Button>
-          <Button onClick={flipCard}>
+          <Button onClick={flipCard} className="w-32">
             <RotateCw className="mr-2 h-4 w-4" />
             Flip Card
           </Button>
@@ -216,78 +235,5 @@ export function FlashcardViewer({ studyText, onBack }: FlashcardViewerProps) {
         </div>
       </div>
     </div>
-  )
-}
-
-function FlashcardModel({
-  isFlipped,
-  question,
-  answer,
-}: {
-  isFlipped: boolean
-  question: string
-  answer: string
-}) {
-  const groupRef = useRef<THREE.Group>(null)
-
-  useEffect(() => {
-    if (!groupRef.current) return
-
-    const targetRotation = isFlipped ? Math.PI : 0
-    const animate = () => {
-      if (!groupRef.current) return
-
-      const currentRotation = groupRef.current.rotation.y
-      const diff = targetRotation - currentRotation
-
-      if (Math.abs(diff) > 0.01) {
-        groupRef.current.rotation.y += diff * 0.1
-        requestAnimationFrame(animate)
-      } else {
-        groupRef.current.rotation.y = targetRotation
-      }
-    }
-
-    animate()
-  }, [isFlipped])
-
-  return (
-    <group ref={groupRef}>
-      {/* Front side (Question) */}
-      <mesh position={[0, 0, 0.01]} rotation={[0, 0, 0]}>
-        <planeGeometry args={[3, 2]} />
-        <meshStandardMaterial color="#4338ca" />
-        <Html
-          transform
-          occlude
-          position={[0, 0, 0.01]}
-          rotation={[0, 0, 0]}
-          style={{ width: "300px", height: "200px", pointerEvents: "none" }}
-        >
-          <div className="flex h-full w-full flex-col items-center justify-center rounded-lg bg-indigo-700 p-6 text-white">
-            <h3 className="mb-2 text-lg font-bold">Question</h3>
-            <p className="text-center">{question}</p>
-          </div>
-        </Html>
-      </mesh>
-
-      {/* Back side (Answer) */}
-      <mesh position={[0, 0, -0.01]} rotation={[0, Math.PI, 0]}>
-        <planeGeometry args={[3, 2]} />
-        <meshStandardMaterial color="#7e22ce" />
-        <Html
-          transform
-          occlude
-          position={[0, 0, 0.01]}
-          rotation={[0, 0, 0]}
-          style={{ width: "300px", height: "200px", pointerEvents: "none" }}
-        >
-          <div className="flex h-full w-full flex-col items-center justify-center rounded-lg bg-purple-700 p-6 text-white">
-            <h3 className="mb-2 text-lg font-bold">Answer</h3>
-            <p className="text-center">{answer}</p>
-          </div>
-        </Html>
-      </mesh>
-    </group>
   )
 }

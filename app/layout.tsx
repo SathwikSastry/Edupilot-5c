@@ -14,6 +14,10 @@ const inter = Inter({ subsets: ["latin"] })
 export const metadata: Metadata = {
   title: "EduPilot - Your AI Study Companion",
   description: "An AI-powered educational app to help you study smarter",
+  metadataBase: new URL("https://edupilot.vercel.app"),
+  alternates: {
+    canonical: "/",
+  },
     generator: 'v0.dev'
 }
 

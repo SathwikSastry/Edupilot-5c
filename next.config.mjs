@@ -2,8 +2,8 @@
 const nextConfig = {
   reactStrictMode: true,
   swcMinify: true,
-  output: 'standalone',
-  trailingSlash: false,
+  output: 'export',
+  distDir: '.next',
   eslint: {
     ignoreDuringBuilds: true,
   },

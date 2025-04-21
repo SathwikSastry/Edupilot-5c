@@ -11,7 +11,7 @@ import { Sidebar } from "@/components/sidebar"
 import { Scissors, HelpCircle, BookOpen, BrainCircuit, RotateCcw, RefreshCw } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { FlashcardViewer } from "@/components/flashcard-viewer"
-import { MindMap } from "@/components/mind-map"
+import { MindMapNotebook } from "@/components/mind-map-notebook"
 import { QuizGenerator } from "@/components/quiz-generator"
 import { ExportTools } from "@/components/export-tools"
 import { VoiceInteraction } from "@/components/voice-interaction"
@@ -241,7 +241,7 @@ export default function StudyPage() {
           </TabsContent>
 
           <TabsContent value="mindmap" className="mt-6">
-            <MindMap studyText={studyText} onBack={() => setActiveTab("input")} />
+            <MindMapNotebook studyText={studyText} onBack={() => setActiveTab("input")} />
           </TabsContent>
 
           <TabsContent value="flashcards" className="mt-6">

@@ -5,7 +5,7 @@ import Link from "next/link"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Home, Calendar, BookOpen, BarChart2, Settings, HelpCircle, LogOut } from "lucide-react"
+import { Home, Calendar, BookOpen, BarChart2, Settings, HelpCircle, LogOut, Clock } from "lucide-react"
 
 export function Sidebar() {
   const pathname = usePathname()
@@ -51,13 +51,23 @@ export function Sidebar() {
               </Button>
             </Link>
 
-            <Link href="/dashboard">
+            <Link href="/pomodoro">
               <Button
                 variant="ghost"
-                className={cn("w-full justify-start", pathname === "/dashboard" && "bg-accent text-accent-foreground")}
+                className={cn("w-full justify-start", pathname === "/pomodoro" && "bg-accent text-accent-foreground")}
+              >
+                <Clock className="mr-2 h-4 w-4" />
+                Pomodoro Timer
+              </Button>
+            </Link>
+
+            <Link href="/analytics">
+              <Button
+                variant="ghost"
+                className={cn("w-full justify-start", pathname === "/analytics" && "bg-accent text-accent-foreground")}
               >
                 <BarChart2 className="mr-2 h-4 w-4" />
-                Dashboard
+                Analytics
               </Button>
             </Link>
           </nav>

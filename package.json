@@ -70,8 +70,8 @@
     "uuid": "latest",
     "jspdf": "latest",
     "html2canvas": "latest",
-    "react-markdown": "latest",
-    "@react-three/drei": "latest"
+    "@react-three/drei": "latest",
+    "react-markdown": "latest"
   },
   "devDependencies": {
     "@types/node": "^22",

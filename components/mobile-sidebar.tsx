@@ -5,7 +5,7 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
-import { Home, Calendar, BookOpen, BarChart2, Settings, HelpCircle, LogOut, Menu } from "lucide-react"
+import { Home, Calendar, BookOpen, BarChart2, Settings, HelpCircle, LogOut, Menu, Clock } from "lucide-react"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
 
 export function MobileSidebar() {
@@ -27,6 +27,11 @@ export function MobileSidebar() {
       name: "Study",
       href: "/study",
       icon: <BookOpen className="mr-2 h-4 w-4" />,
+    },
+    {
+      name: "Pomodoro",
+      href: "/pomodoro",
+      icon: <Clock className="mr-2 h-4 w-4" />,
     },
     {
       name: "Analytics",

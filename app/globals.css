@@ -77,16 +77,6 @@
     @apply bg-background text-foreground;
     font-feature-settings: "rlig" 1, "calt" 1;
   }
-
-  /* Hide default cursor when custom cursor is active */
-  html:not(.touch) {
-    cursor: none !important;
-  }
-
-  html:not(.touch) a,
-  html:not(.touch) button {
-    cursor: none !important;
-  }
 }
 
 /* Glassmorphism styles */
@@ -154,4 +144,9 @@
 
 .dark .prose {
   @apply text-foreground;
+}
+
+/* Perspective for 3D card flipping */
+.perspective-1000 {
+  perspective: 1000px;
 }

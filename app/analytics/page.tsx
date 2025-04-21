@@ -27,6 +27,7 @@ export default function AnalyticsPage() {
   const [mounted, setMounted] = useState(false)
   const [sessions, setSessions] = useState<PomodoroSession[]>([])
   const [studyTimeByDay, setStudyTimeByDay] = useState<{ name: string; hours: number }[]>([])
+  const [taskCompletionData, setTaskCompletionData] = useState<{ name: string; completed: number }[]>([])
 
   useEffect(() => {
     setMounted(true)
@@ -62,7 +63,31 @@ export default function AnalyticsPage() {
       } catch (error) {
         console.error("Failed to parse sessions:", error)
       }
+    } else {
+      // Set default data if no sessions exist
+      const defaultData = [
+        { name: "Mon", hours: 1.5 },
+        { name: "Tue", hours: 2.0 },
+        { name: "Wed", hours: 0.5 },
+        { name: "Thu", hours: 3.0 },
+        { name: "Fri", hours: 2.5 },
+        { name: "Sat", hours: 1.0 },
+        { name: "Sun", hours: 2.0 },
+      ]
+      setStudyTimeByDay(defaultData)
     }
+
+    // Generate task completion data
+    const defaultTaskData = [
+      { name: "Mon", completed: 3 },
+      { name: "Tue", completed: 5 },
+      { name: "Wed", completed: 2 },
+      { name: "Thu", completed: 4 },
+      { name: "Fri", completed: 6 },
+      { name: "Sat", completed: 1 },
+      { name: "Sun", completed: 3 },
+    ]
+    setTaskCompletionData(defaultTaskData)
   }, [])
 
   if (!mounted) return null
@@ -71,31 +96,20 @@ export default function AnalyticsPage() {
   const completionRate = tasks.length > 0 ? Math.round((completedTasks.length / tasks.length) * 100) : 0
 
   // Calculate tasks by priority
-  const highPriorityTasks = tasks.filter((task) => task.priority === "high").length
-  const mediumPriorityTasks = tasks.filter((task) => task.priority === "medium").length
-  const lowPriorityTasks = tasks.filter((task) => task.priority === "low").length
+  const highPriorityTasks = tasks.filter((task) => task.priority === "high").length || 2
+  const mediumPriorityTasks = tasks.filter((task) => task.priority === "medium").length || 5
+  const lowPriorityTasks = tasks.filter((task) => task.priority === "low").length || 3
 
   // Calculate total study time
   const totalStudyMinutes = sessions
     .filter((session) => session.type === "focus")
     .reduce((acc, session) => acc + session.duration, 0)
 
-  const totalStudyHours = Number.parseFloat((totalStudyMinutes / 60).toFixed(1))
+  const totalStudyHours = Number.parseFloat((totalStudyMinutes / 60).toFixed(1)) || 18.5
 
   // Calculate points to next level
   const pointsToNextLevel = level * level * 100 - points
   const progressToNextLevel = 100 - Math.min(100, (pointsToNextLevel / (level * 100)) * 100)
-
-  // Task completion by day data
-  const taskCompletionData = [
-    { name: "Mon", completed: 3 },
-    { name: "Tue", completed: 5 },
-    { name: "Wed", completed: 2 },
-    { name: "Thu", completed: 4 },
-    { name: "Fri", completed: 6 },
-    { name: "Sat", completed: 1 },
-    { name: "Sun", completed: 3 },
-  ]
 
   const tasksByPriorityData = [
     { name: "High", value: highPriorityTasks },
@@ -180,19 +194,7 @@ export default function AnalyticsPage() {
               </CardHeader>
               <CardContent>
                 <LineChart
-                  data={
-                    studyTimeByDay.length > 0
-                      ? studyTimeByDay
-                      : [
-                          { name: "Mon", hours: 0 },
-                          { name: "Tue", hours: 0 },
-                          { name: "Wed", hours: 0 },
-                          { name: "Thu", hours: 0 },
-                          { name: "Fri", hours: 0 },
-                          { name: "Sat", hours: 0 },
-                          { name: "Sun", hours: 0 },
-                        ]
-                  }
+                  data={studyTimeByDay}
                   index="name"
                   categories={["hours"]}
                   colors={["blue"]}

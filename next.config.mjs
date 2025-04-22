@@ -1,7 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  output: 'standalone',
+  // Change from 'standalone' to 'export' for static site generation
+  output: 'export',
   eslint: {
     ignoreDuringBuilds: true,
   },
@@ -11,8 +12,7 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
-  // This ensures proper routing in production
-  trailingSlash: false,
+  // Remove trailingSlash setting as it can cause issues with static exports
 }
 
 export default nextConfig

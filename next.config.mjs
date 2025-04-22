@@ -1,9 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  swcMinify: true,
-  output: 'export',
-  distDir: '.next',
+  output: 'standalone',
   eslint: {
     ignoreDuringBuilds: true,
   },
@@ -13,6 +11,8 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
+  // This ensures proper routing in production
+  trailingSlash: false,
 }
 
 export default nextConfig

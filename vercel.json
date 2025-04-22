@@ -1,5 +1,3 @@
 {
-  "rewrites": [{ "source": "/(.*)", "destination": "/" }],
-  "buildCommand": "next build",
-  "outputDirectory": ".next"
+  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
 }

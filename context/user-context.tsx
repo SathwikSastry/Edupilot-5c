@@ -21,13 +21,24 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   const [userData, setUserData] = useState<UserData | null>(null)
 
   useEffect(() => {
-    // Load user data from localStorage on mount
-    const storedData = localStorage.getItem("edupilot-user")
-    if (storedData) {
-      try {
-        setUserData(JSON.parse(storedData))
-      } catch (error) {
-        console.error("Failed to parse user data:", error)
+    // Only load user data from localStorage on mount if we're in a browser environment
+    if (typeof window !== "undefined") {
+      const storedData = localStorage.getItem("edupilot-user")
+      if (storedData) {
+        try {
+          const parsedData = JSON.parse(storedData)
+          // Only set the user data if it's valid (has a name property)
+          if (parsedData && parsedData.name) {
+            setUserData(parsedData)
+          } else {
+            // If the data is invalid, remove it from localStorage
+            localStorage.removeItem("edupilot-user")
+          }
+        } catch (error) {
+          console.error("Failed to parse user data:", error)
+          // If there's an error parsing the data, remove it from localStorage
+          localStorage.removeItem("edupilot-user")
+        }
       }
     }
   }, [])

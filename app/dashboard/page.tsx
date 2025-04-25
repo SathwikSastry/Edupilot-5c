@@ -39,7 +39,7 @@ export default function DashboardPage() {
     setMounted(true)
 
     // Redirect to auth page if not logged in
-    if (!userData?.name) {
+    if (typeof window !== "undefined" && !userData?.name) {
       router.push("/auth")
     }
 

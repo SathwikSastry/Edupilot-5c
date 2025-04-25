@@ -2,7 +2,7 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -17,6 +17,15 @@ export default function AuthPage() {
   const [goal, setGoal] = useState("")
   const { setUserData } = useUser()
   const router = useRouter()
+
+  useEffect(() => {
+    // Clear any existing user data when the auth page is loaded
+    setUserData(null)
+    // Also clear from localStorage directly to ensure it's completely removed
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("edupilot-user")
+    }
+  }, [setUserData])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()

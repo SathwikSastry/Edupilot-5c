@@ -35,12 +35,16 @@ export default function DashboardPage() {
   const [mounted, setMounted] = useState(false)
   const [greeting, setGreeting] = useState("")
 
+  // Update the useEffect to fix the redirection logic
   useEffect(() => {
     setMounted(true)
 
-    // Redirect to auth page if not logged in
-    if (typeof window !== "undefined" && !userData?.name) {
-      router.push("/auth")
+    // Redirect to auth page if not logged in, but with a check to prevent immediate redirection
+    if (typeof window !== "undefined") {
+      // Only redirect after the component has mounted and we're sure userData is null
+      if (mounted && !userData?.name) {
+        router.push("/auth")
+      }
     }
 
     // Set greeting based on time of day
@@ -48,7 +52,7 @@ export default function DashboardPage() {
     if (hour < 12) setGreeting("Good morning")
     else if (hour < 18) setGreeting("Good afternoon")
     else setGreeting("Good evening")
-  }, [userData, router])
+  }, [userData, router, mounted])
 
   if (!mounted || !userData) return null
 

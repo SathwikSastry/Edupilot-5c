@@ -27,17 +27,22 @@ export default function AuthPage() {
     }
   }, [setUserData])
 
+  // Update the handleSubmit function to ensure proper redirection
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
 
     if (name.trim()) {
+      // Set the user data first
       setUserData({
         name,
         goal: goal.trim() || "Become a better student",
         createdAt: new Date().toISOString(),
       })
 
-      router.push("/dashboard")
+      // Use a small timeout to ensure the data is set before navigation
+      setTimeout(() => {
+        router.push("/dashboard")
+      }, 100)
     }
   }
 

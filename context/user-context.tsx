@@ -29,7 +29,10 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
           const parsedData = JSON.parse(storedData)
           // Only set the user data if it's valid (has a name property)
           if (parsedData && parsedData.name) {
-            setUserData(parsedData)
+            // Use a small timeout to ensure consistent state updates
+            setTimeout(() => {
+              setUserData(parsedData)
+            }, 0)
           } else {
             // If the data is invalid, remove it from localStorage
             localStorage.removeItem("edupilot-user")
@@ -47,10 +50,12 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
     setUserData(data)
 
     // Save to localStorage
-    if (data) {
-      localStorage.setItem("edupilot-user", JSON.stringify(data))
-    } else {
-      localStorage.removeItem("edupilot-user")
+    if (typeof window !== "undefined") {
+      if (data) {
+        localStorage.setItem("edupilot-user", JSON.stringify(data))
+      } else {
+        localStorage.removeItem("edupilot-user")
+      }
     }
   }
 

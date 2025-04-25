@@ -12,6 +12,9 @@ import { FloatingButton } from "@/components/floating-button"
 import { BookOpen, Calendar, Brain, Award, Sparkles, ChevronDown } from "lucide-react"
 import Link from "next/link"
 
+// Import useUser
+import { useUser } from "@/context/user-context"
+
 export default function HomePage() {
   const [mounted, setMounted] = useState(false)
   const { checkAndUpdateStreak } = usePilotPoints()
@@ -26,6 +29,9 @@ export default function HomePage() {
   const opacity = useTransform(scrollYProgress, [0, 0.5], [1, 0])
   const scale = useTransform(scrollYProgress, [0, 0.5], [1, 0.8])
   const y = useTransform(scrollYProgress, [0, 0.5], [0, 100])
+
+  // Add useUser hook in the HomePage component
+  const { userData } = useUser()
 
   useEffect(() => {
     setMounted(true)
@@ -149,6 +155,7 @@ export default function HomePage() {
             />
           </div>
 
+          {/* Update the button in the motion.div at the end of the Features Section */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -161,7 +168,9 @@ export default function HomePage() {
               size="lg"
               className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700"
             >
-              <Link href="/auth">Get Started Today</Link>
+              <Link href={userData?.name ? "/dashboard" : "/auth"}>
+                {userData?.name ? "Go to Dashboard" : "Get Started Today"}
+              </Link>
             </Button>
           </motion.div>
         </div>

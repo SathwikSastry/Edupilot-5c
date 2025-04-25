@@ -21,6 +21,16 @@ export function Sidebar() {
           </div>
 
           <nav className="space-y-1.5">
+            <Link href="/dashboard">
+              <Button
+                variant="ghost"
+                className={cn("w-full justify-start", pathname === "/dashboard" && "bg-accent text-accent-foreground")}
+              >
+                <Home className="mr-2 h-4 w-4" />
+                Dashboard
+              </Button>
+            </Link>
+
             <Link href="/">
               <Button
                 variant="ghost"

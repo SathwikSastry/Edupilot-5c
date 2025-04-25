@@ -8,7 +8,7 @@ import { ModeToggle } from "@/components/mode-toggle"
 import { useUser } from "@/context/user-context"
 import { cn } from "@/lib/utils"
 import { motion } from "framer-motion"
-import { BookOpen, Calendar, BarChart2 } from "lucide-react"
+import { BookOpen, Calendar, BarChart2, Home } from "lucide-react"
 import { MobileSidebar } from "@/components/mobile-sidebar"
 import { usePilotPoints } from "@/hooks/use-pilot-points"
 
@@ -27,7 +27,13 @@ export function Navbar() {
     return () => window.removeEventListener("scroll", handleScroll)
   }, [])
 
+  // Update the navLinks array to include dashboard
   const navLinks = [
+    {
+      name: "Dashboard",
+      href: "/dashboard",
+      icon: <Home className="mr-2 h-4 w-4" />,
+    },
     {
       name: "Tasks",
       href: "/tasks",

@@ -28,7 +28,7 @@ export default function AuthPage() {
         createdAt: new Date().toISOString(),
       })
 
-      router.push("/tasks")
+      router.push("/dashboard")
     }
   }
 

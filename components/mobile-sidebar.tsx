@@ -12,7 +12,13 @@ export function MobileSidebar() {
   const pathname = usePathname()
   const [open, setOpen] = useState(false)
 
+  // Update the routes array to include dashboard
   const routes = [
+    {
+      name: "Dashboard",
+      href: "/dashboard",
+      icon: <Home className="mr-2 h-4 w-4" />,
+    },
     {
       name: "Home",
       href: "/",

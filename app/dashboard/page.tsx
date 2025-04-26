@@ -3,7 +3,6 @@
 import type React from "react"
 
 import { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
 import { motion } from "framer-motion"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -28,33 +27,51 @@ import {
 import Link from "next/link"
 
 export default function DashboardPage() {
-  const router = useRouter()
-  const { userData } = useUser()
+  const { userData, isLoading } = useUser()
   const { tasks } = useTasks()
   const { points, level, streak } = usePilotPoints()
-  const [mounted, setMounted] = useState(false)
   const [greeting, setGreeting] = useState("")
+  const [authChecked, setAuthChecked] = useState(false)
 
-  // Update the useEffect to fix the redirection logic
+  // Set greeting based on time of day
   useEffect(() => {
-    setMounted(true)
-
-    // Redirect to auth page if not logged in, but with a check to prevent immediate redirection
-    if (typeof window !== "undefined") {
-      // Only redirect after the component has mounted and we're sure userData is null
-      if (mounted && !userData?.name) {
-        router.push("/auth")
-      }
-    }
-
-    // Set greeting based on time of day
     const hour = new Date().getHours()
     if (hour < 12) setGreeting("Good morning")
     else if (hour < 18) setGreeting("Good afternoon")
     else setGreeting("Good evening")
-  }, [userData, router, mounted])
+  }, [])
 
-  if (!mounted || !userData) return null
+  // Check authentication status
+  useEffect(() => {
+    if (!isLoading) {
+      console.log("Dashboard auth check - User data:", userData?.name || "none")
+
+      if (!userData) {
+        console.log("No user data found, redirecting to auth page")
+        // Use direct navigation for more reliability
+        window.location.href = "/auth"
+      } else {
+        setAuthChecked(true)
+      }
+    }
+  }, [userData, isLoading])
+
+  // Show loading state while checking authentication
+  if (isLoading || !authChecked) {
+    return (
+      <div className="flex min-h-[calc(100vh-8rem)] items-center justify-center">
+        <div className="text-center">
+          <div className="mb-4 h-12 w-12 animate-spin rounded-full border-4 border-primary border-t-transparent mx-auto"></div>
+          <p>Loading dashboard...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // If not authenticated, don't render anything (will redirect)
+  if (!userData) {
+    return null
+  }
 
   // Calculate task stats
   const completedTasks = tasks.filter((task) => task.completed)
@@ -86,6 +103,7 @@ export default function DashboardPage() {
           </motion.div>
         </div>
 
+        {/* Rest of the dashboard content remains the same */}
         {/* Quick Stats */}
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-8">
           <motion.div

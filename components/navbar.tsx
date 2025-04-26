@@ -8,13 +8,13 @@ import { ModeToggle } from "@/components/mode-toggle"
 import { useUser } from "@/context/user-context"
 import { cn } from "@/lib/utils"
 import { motion } from "framer-motion"
-import { BookOpen, Calendar, BarChart2, Home } from "lucide-react"
+import { BookOpen, Calendar, BarChart2, Home, LogOut } from "lucide-react"
 import { MobileSidebar } from "@/components/mobile-sidebar"
 import { usePilotPoints } from "@/hooks/use-pilot-points"
 
 export function Navbar() {
   const pathname = usePathname()
-  const { userData } = useUser()
+  const { userData, logout } = useUser()
   const { points } = usePilotPoints()
   const [isScrolled, setIsScrolled] = useState(false)
 
@@ -26,6 +26,11 @@ export function Navbar() {
     window.addEventListener("scroll", handleScroll)
     return () => window.removeEventListener("scroll", handleScroll)
   }, [])
+
+  const handleLogout = () => {
+    logout()
+    window.location.href = "/auth"
+  }
 
   // Update the navLinks array to include dashboard
   const navLinks = [
@@ -105,9 +110,14 @@ export function Navbar() {
           <ModeToggle />
 
           {userData?.name ? (
-            <Button variant="outline" className="hidden md:flex">
-              Welcome, {userData.name}
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" className="hidden md:flex">
+                Welcome, {userData.name}
+              </Button>
+              <Button variant="ghost" size="icon" onClick={handleLogout} title="Logout" className="hidden md:flex">
+                <LogOut className="h-4 w-4" />
+              </Button>
+            </div>
           ) : (
             <Button asChild className="hidden md:flex">
               <Link href="/auth">Get Started</Link>

@@ -7,10 +7,12 @@ import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { Home, Calendar, BookOpen, BarChart2, Settings, HelpCircle, LogOut, Menu, Clock } from "lucide-react"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet"
+import { useUser } from "@/context/user-context"
 
 export function MobileSidebar() {
   const pathname = usePathname()
   const [open, setOpen] = useState(false)
+  const { logout } = useUser()
 
   // Update the routes array to include dashboard
   const routes = [
@@ -45,6 +47,12 @@ export function MobileSidebar() {
       icon: <BarChart2 className="mr-2 h-4 w-4" />,
     },
   ]
+
+  const handleLogout = () => {
+    logout()
+    setOpen(false)
+    window.location.href = "/auth"
+  }
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
@@ -83,7 +91,7 @@ export function MobileSidebar() {
               <HelpCircle className="mr-2 h-4 w-4" />
               Help & Support
             </Button>
-            <Button variant="ghost" className="w-full justify-start text-muted-foreground">
+            <Button variant="ghost" className="w-full justify-start text-destructive" onClick={handleLogout}>
               <LogOut className="mr-2 h-4 w-4" />
               Sign Out
             </Button>

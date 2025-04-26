@@ -31,7 +31,7 @@ export default function HomePage() {
   const y = useTransform(scrollYProgress, [0, 0.5], [0, 100])
 
   // Add useUser hook in the HomePage component
-  const { userData } = useUser()
+  const { userData, isLoading } = useUser()
 
   useEffect(() => {
     setMounted(true)
@@ -73,9 +73,9 @@ export default function HomePage() {
             color="purple"
           />
           <FloatingButton
-            href="/dashboard"
+            href={userData ? "/dashboard" : "/auth"}
             icon={<Brain className="mr-2 h-5 w-5" />}
-            label="Track Progress"
+            label={userData ? "Dashboard" : "Get Started"}
             color="pink"
           />
         </div>
@@ -168,9 +168,7 @@ export default function HomePage() {
               size="lg"
               className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700"
             >
-              <Link href={userData?.name ? "/dashboard" : "/auth"}>
-                {userData?.name ? "Go to Dashboard" : "Get Started Today"}
-              </Link>
+              <Link href={userData ? "/dashboard" : "/auth"}>{userData ? "Go to Dashboard" : "Get Started Today"}</Link>
             </Button>
           </motion.div>
         </div>

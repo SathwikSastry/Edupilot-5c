@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { createContext, useContext, useState, useEffect } from "react"
 
 interface UserData {
@@ -13,53 +12,76 @@ interface UserData {
 interface UserContextType {
   userData: UserData | null
   setUserData: (data: UserData | null) => void
+  isLoading: boolean
+  logout: () => void
 }
+
+const USER_STORAGE_KEY = "edupilot-user-data"
 
 const UserContext = createContext<UserContextType | undefined>(undefined)
 
 export function UserProvider({ children }: { children: React.ReactNode }) {
-  const [userData, setUserData] = useState<UserData | null>(null)
+  const [userData, setUserDataState] = useState<UserData | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
 
+  // Load user data from localStorage on mount
   useEffect(() => {
-    // Only load user data from localStorage on mount if we're in a browser environment
-    if (typeof window !== "undefined") {
-      const storedData = localStorage.getItem("edupilot-user")
-      if (storedData) {
-        try {
+    function loadUserData() {
+      try {
+        setIsLoading(true)
+        const storedData = localStorage.getItem(USER_STORAGE_KEY)
+
+        if (storedData) {
           const parsedData = JSON.parse(storedData)
-          // Only set the user data if it's valid (has a name property)
-          if (parsedData && parsedData.name) {
-            // Use a small timeout to ensure consistent state updates
-            setTimeout(() => {
-              setUserData(parsedData)
-            }, 0)
+          if (parsedData && typeof parsedData === "object" && parsedData.name) {
+            console.log("User data loaded from localStorage:", parsedData.name)
+            setUserDataState(parsedData)
           } else {
-            // If the data is invalid, remove it from localStorage
-            localStorage.removeItem("edupilot-user")
+            console.log("Invalid user data in localStorage, clearing")
+            localStorage.removeItem(USER_STORAGE_KEY)
+            setUserDataState(null)
           }
-        } catch (error) {
-          console.error("Failed to parse user data:", error)
-          // If there's an error parsing the data, remove it from localStorage
-          localStorage.removeItem("edupilot-user")
+        } else {
+          console.log("No user data found in localStorage")
+          setUserDataState(null)
         }
+      } catch (error) {
+        console.error("Failed to load user data:", error)
+        localStorage.removeItem(USER_STORAGE_KEY)
+        setUserDataState(null)
+      } finally {
+        setIsLoading(false)
       }
+    }
+
+    if (typeof window !== "undefined") {
+      loadUserData()
+    } else {
+      setIsLoading(false)
     }
   }, [])
 
-  const handleSetUserData = (data: UserData | null) => {
-    setUserData(data)
+  // Function to set user data and save to localStorage
+  const setUserData = (data: UserData | null) => {
+    console.log("Setting user data:", data?.name || "null")
 
-    // Save to localStorage
-    if (typeof window !== "undefined") {
-      if (data) {
-        localStorage.setItem("edupilot-user", JSON.stringify(data))
-      } else {
-        localStorage.removeItem("edupilot-user")
-      }
+    if (data) {
+      localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(data))
+    } else {
+      localStorage.removeItem(USER_STORAGE_KEY)
     }
+
+    setUserDataState(data)
   }
 
-  return <UserContext.Provider value={{ userData, setUserData: handleSetUserData }}>{children}</UserContext.Provider>
+  // Function to logout
+  const logout = () => {
+    console.log("Logging out user")
+    localStorage.removeItem(USER_STORAGE_KEY)
+    setUserDataState(null)
+  }
+
+  return <UserContext.Provider value={{ userData, setUserData, isLoading, logout }}>{children}</UserContext.Provider>
 }
 
 export function useUser() {

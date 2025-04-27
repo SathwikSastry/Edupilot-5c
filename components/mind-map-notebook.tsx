@@ -80,15 +80,25 @@ export function MindMapNotebook({ studyText, onBack }: MindMapNotebookProps) {
         return
       }
 
-      // Handle both formats of mind map data
+      // Handle various formats of mind map data
       if (typeof mindMapData.center === "string" && Array.isArray(mindMapData.nodes)) {
         // Original format with center string and nodes array
         setMindMap(mindMapData)
       } else if (typeof mindMapData.center === "object" && mindMapData.center.text && mindMapData.center.children) {
-        // New format with center as root node with children
+        // Format with center as root node with children
         setMindMap({
           center: mindMapData.center.text,
           nodes: mindMapData.center.children,
+        })
+      } else if (
+        typeof mindMapData.center === "object" &&
+        mindMapData.center.text &&
+        Array.isArray(mindMapData.nodes)
+      ) {
+        // Format with center as object with text property and separate nodes array
+        setMindMap({
+          center: mindMapData.center.text,
+          nodes: mindMapData.nodes,
         })
       } else {
         console.error("Invalid mind map format:", mindMapData)

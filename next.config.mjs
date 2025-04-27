@@ -1,8 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
-  // Remove the 'export' output setting as it creates a static build without routes-manifest.json
-  // output: 'export',
   eslint: {
     ignoreDuringBuilds: true,
   },
@@ -11,6 +9,18 @@ const nextConfig = {
   },
   images: {
     unoptimized: true,
+  },
+  // Optimize performance
+  swcMinify: true,
+  compiler: {
+    removeConsole: process.env.NODE_ENV === 'production' ? {
+      exclude: ['error', 'warn'],
+    } : false,
+  },
+  // Improve page loading performance
+  experimental: {
+    optimizeCss: true,
+    optimizePackageImports: ['lucide-react', 'framer-motion', 'recharts'],
   },
 }
 

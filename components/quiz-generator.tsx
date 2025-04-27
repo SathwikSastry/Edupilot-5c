@@ -6,12 +6,11 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/componen
 import { Button } from "@/components/ui/button"
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group"
 import { Label } from "@/components/ui/label"
-import { ChevronLeft, ChevronRight, CheckCircle, XCircle } from "lucide-react"
-import { useToast } from "@/hooks/use-toast"
+import { ChevronLeft, ChevronRight, CheckCircle, XCircle, AlertCircle } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { extractJsonFromString } from "@/lib/extract-json"
 import { ExportTools } from "@/components/export-tools"
 import { usePilotPoints } from "@/hooks/use-pilot-points"
+import { useAIRequest } from "@/hooks/use-ai-request"
 
 interface QuizGeneratorProps {
   studyText: string
@@ -31,70 +30,21 @@ export function QuizGenerator({ studyText, onBack }: QuizGeneratorProps) {
   const [isAnswered, setIsAnswered] = useState(false)
   const [score, setScore] = useState(0)
   const [isQuizCompleted, setIsQuizCompleted] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
-  const { toast } = useToast()
   const { addPoints } = usePilotPoints()
 
-  const generateQuiz = async () => {
-    if (!studyText.trim()) {
-      toast({
-        title: "Empty input",
-        description: "Please enter some text to generate a quiz",
-        variant: "destructive",
-      })
-      return
-    }
-
-    setIsLoading(true)
-
-    try {
-      const response = await fetch("/api/ai", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          task: "quiz",
-          content: studyText,
-        }),
-      })
-
-      if (!response.ok) {
-        throw new Error("Failed to generate quiz")
-      }
-
-      const data = await response.json()
-
-      // Use the utility function to extract JSON from the response
-      const quizData = extractJsonFromString(data.result)
-
-      if (!quizData) {
-        console.error("Failed to parse quiz data:", data.result)
-        toast({
-          title: "Processing error",
-          description: "There was an error processing the AI response. Please try again.",
-          variant: "destructive",
-        })
-        setIsLoading(false)
-        return
-      }
-
+  const { isLoading, error, makeRequest } = useAIRequest({
+    parseJson: true,
+    onSuccess: (data) => {
       // Validate the structure
       if (
-        !Array.isArray(quizData) ||
-        !quizData.every((q) => q.question && Array.isArray(q.options) && q.options.length === 4 && q.correctAnswer)
+        !Array.isArray(data) ||
+        !data.every((q) => q.question && Array.isArray(q.options) && q.options.length === 4 && q.correctAnswer)
       ) {
-        console.error("Invalid quiz format:", quizData)
-        toast({
-          title: "Invalid quiz format",
-          description: "The AI generated an invalid quiz format. Please try again.",
-          variant: "destructive",
-        })
-        setIsLoading(false)
+        console.error("Invalid quiz format:", data)
         return
       }
 
-      setQuiz(quizData)
+      setQuiz(data)
       setCurrentQuestionIndex(0)
       setSelectedOption(null)
       setIsAnswered(false)
@@ -103,16 +53,11 @@ export function QuizGenerator({ studyText, onBack }: QuizGeneratorProps) {
 
       // Add points for generating a quiz
       addPoints(20, "Generated a quiz")
-    } catch (error) {
-      console.error("Error generating quiz:", error)
-      toast({
-        title: "Generation failed",
-        description: "There was an error generating the quiz. Please try again.",
-        variant: "destructive",
-      })
-    } finally {
-      setIsLoading(false)
-    }
+    },
+  })
+
+  const generateQuiz = async () => {
+    await makeRequest("quiz", studyText)
   }
 
   useEffect(() => {
@@ -167,6 +112,39 @@ export function QuizGenerator({ studyText, onBack }: QuizGeneratorProps) {
         <div className="mb-4 h-12 w-12 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
         <p className="text-lg font-medium">Generating quiz...</p>
         <p className="text-sm text-muted-foreground">This may take a moment</p>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col">
+        <div className="mb-6 flex items-center justify-between">
+          <Button variant="outline" onClick={onBack}>
+            <ChevronLeft className="mr-2 h-4 w-4" /> Back
+          </Button>
+        </div>
+
+        <Card className="border-destructive">
+          <CardHeader className="bg-destructive/10">
+            <CardTitle className="flex items-center text-destructive">
+              <AlertCircle className="mr-2 h-5 w-5" />
+              Error Generating Quiz
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="pt-6">
+            <p className="mb-4">{error}</p>
+            <p className="text-sm text-muted-foreground">
+              This could be due to an API issue or connection problem. Please try again later.
+            </p>
+          </CardContent>
+          <CardFooter className="flex justify-between">
+            <Button variant="outline" onClick={onBack}>
+              Back to Input
+            </Button>
+            <Button onClick={generateQuiz}>Try Again</Button>
+          </CardFooter>
+        </Card>
       </div>
     )
   }

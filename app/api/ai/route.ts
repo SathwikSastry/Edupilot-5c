@@ -1,11 +1,27 @@
 import { type NextRequest, NextResponse } from "next/server"
 
-const OPENROUTER_API_KEY = "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"
+// Use environment variable if available, otherwise use the hardcoded key as fallback
+const OPENROUTER_API_KEY =
+  process.env.OPENROUTER_API_KEY || "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"
 const OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
+
+// Cache for storing recent responses to avoid duplicate API calls
+const responseCache = new Map()
+const CACHE_TTL = 1000 * 60 * 10 // 10 minutes
 
 export async function POST(req: NextRequest) {
   try {
     const { prompt, task, content } = await req.json()
+
+    // Create a cache key based on the request parameters
+    const cacheKey = `${task}:${content?.slice(0, 100)}:${prompt?.slice(0, 50)}`
+
+    // Check if we have a cached response
+    const cachedResponse = responseCache.get(cacheKey)
+    if (cachedResponse && Date.now() - cachedResponse.timestamp < CACHE_TTL) {
+      console.log("Using cached response for:", task)
+      return NextResponse.json(cachedResponse.data)
+    }
 
     // Select the appropriate model based on the task
     let model = "meta-llama/llama-4-scout:free" // default model
@@ -64,42 +80,99 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: "Invalid task type" }, { status: 400 })
     }
 
-    // Make request to OpenRouter API
-    const response = await fetch(`${OPENROUTER_BASE_URL}/chat/completions`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${OPENROUTER_API_KEY}`,
-        "HTTP-Referer": "https://vercel.com", // Replace with your actual domain in production
-        "X-Title": "EduPilot AI Study Assistant",
-      },
-      body: JSON.stringify({
-        model: model,
-        messages: [
-          {
-            role: "system",
-            content: systemPrompt,
-          },
-          {
-            role: "user",
-            content: userPrompt,
-          },
-        ],
-        temperature: temperature,
-        max_tokens: maxTokens,
-      }),
-    })
+    console.log(`Making OpenRouter API request for task: ${task}`)
 
-    if (!response.ok) {
-      const errorData = await response.json()
-      console.error("OpenRouter API error:", errorData)
-      return NextResponse.json({ error: "Failed to get response from AI" }, { status: 500 })
+    // Implement exponential backoff for API requests
+    const maxRetries = 3
+    let retryCount = 0
+    let response = null
+
+    while (retryCount < maxRetries) {
+      try {
+        // Make request to OpenRouter API with proper authentication
+        response = await fetch(`${OPENROUTER_BASE_URL}/chat/completions`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${OPENROUTER_API_KEY}`,
+            "HTTP-Referer": "https://edupilot-design.vercel.app", // Use the app URL from .env
+            "X-Title": "EduPilot AI Study Assistant",
+          },
+          body: JSON.stringify({
+            model: model,
+            messages: [
+              {
+                role: "system",
+                content: systemPrompt,
+              },
+              {
+                role: "user",
+                content: userPrompt,
+              },
+            ],
+            temperature: temperature,
+            max_tokens: maxTokens,
+          }),
+        })
+
+        if (response.ok) {
+          break
+        } else {
+          const errorData = await response.json()
+          console.error(`OpenRouter API error (attempt ${retryCount + 1}):`, errorData)
+
+          // If we get a rate limit error, wait and retry
+          if (response.status === 429) {
+            const backoffTime = Math.pow(2, retryCount) * 1000
+            await new Promise((resolve) => setTimeout(resolve, backoffTime))
+            retryCount++
+          } else {
+            // For other errors, don't retry
+            return NextResponse.json(
+              { error: "Failed to get response from AI", details: errorData },
+              { status: response.status },
+            )
+          }
+        }
+      } catch (error) {
+        console.error(`API request error (attempt ${retryCount + 1}):`, error)
+        retryCount++
+
+        if (retryCount >= maxRetries) {
+          return NextResponse.json(
+            {
+              error: "Network error after multiple retries",
+              details: error instanceof Error ? error.message : String(error),
+            },
+            { status: 500 },
+          )
+        }
+
+        // Wait before retrying
+        const backoffTime = Math.pow(2, retryCount) * 1000
+        await new Promise((resolve) => setTimeout(resolve, backoffTime))
+      }
+    }
+
+    if (!response || !response.ok) {
+      return NextResponse.json({ error: "Failed to get response from AI after multiple attempts" }, { status: 500 })
     }
 
     const data = await response.json()
-    return NextResponse.json({ result: data.choices[0].message.content })
+    const result = { result: data.choices[0].message.content }
+
+    // Cache the successful response
+    responseCache.set(cacheKey, {
+      data: result,
+      timestamp: Date.now(),
+    })
+
+    return NextResponse.json(result)
   } catch (error) {
     console.error("API route error:", error)
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 })
+    return NextResponse.json(
+      { error: "Internal server error", details: error instanceof Error ? error.message : String(error) },
+      { status: 500 },
+    )
   }
 }

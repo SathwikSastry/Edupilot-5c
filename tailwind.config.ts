@@ -9,6 +9,9 @@ const config = {
     "./src/**/*.{ts,tsx}",
     "*.{js,ts,jsx,tsx,mdx}",
   ],
+  future: {
+    hoverOnlyWhenSupported: true, // Optimize for touch devices
+  },
   prefix: "",
   theme: {
     container: {

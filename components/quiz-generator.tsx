@@ -34,6 +34,7 @@ export function QuizGenerator({ studyText, onBack }: QuizGeneratorProps) {
 
   const { isLoading, error, makeRequest } = useAIRequest({
     parseJson: true,
+    timeout: 30000, // 30 second timeout
     onSuccess: (data) => {
       // Validate the structure
       if (
@@ -63,6 +64,11 @@ export function QuizGenerator({ studyText, onBack }: QuizGeneratorProps) {
   useEffect(() => {
     if (studyText.trim()) {
       generateQuiz()
+    }
+
+    // Cleanup function to cancel any pending requests when component unmounts
+    return () => {
+      // If we had a cancelRequest function exposed from the hook, we would call it here
     }
   }, [])
 

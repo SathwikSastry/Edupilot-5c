@@ -25,7 +25,8 @@ export default function StudyPage() {
   const [resultType, setResultType] = useState<string>("")
   const [question, setQuestion] = useState<string>("")
 
-  const { isLoading, error, makeRequest } = useAIRequest({
+  const { isLoading, error, makeRequest, cancelRequest } = useAIRequest({
+    timeout: 30000, // 30 second timeout
     onSuccess: (data) => {
       setResult(data)
       setActiveTab("result")
@@ -33,6 +34,9 @@ export default function StudyPage() {
   })
 
   const processStudyText = async (action: string) => {
+    // Cancel any previous request
+    cancelRequest()
+
     setResultType(action)
     await makeRequest(action, studyText, action === "askdoubt" ? question : undefined)
   }

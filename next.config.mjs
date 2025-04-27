@@ -17,9 +17,9 @@ const nextConfig = {
       exclude: ['error', 'warn'],
     } : false,
   },
-  // Improve page loading performance
+  // Improve page loading performance - removing optimizeCss that requires critters
   experimental: {
-    optimizeCss: true,
+    // optimizeCss: true, // Removing this line as it requires critters
     optimizePackageImports: ['lucide-react', 'framer-motion', 'recharts'],
   },
 }

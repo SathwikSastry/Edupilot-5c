@@ -1,141 +1,111 @@
 "use client"
 
 import { useState, useCallback } from "react"
-import { useToast } from "@/hooks/use-toast"
-import { extractJsonFromString } from "@/lib/extract-json"
 
 interface UseAIRequestOptions {
-  onSuccess?: (data: any) => void
-  onError?: (error: string) => void
-  parseJson?: boolean
+  endpoint?: string
+  retries?: number
+  timeout?: number
+  cacheResults?: boolean
 }
 
-export function useAIRequest(options: UseAIRequestOptions = {}) {
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [data, setData] = useState<any>(null)
-  const { toast } = useToast()
+interface UseAIRequestResult<T> {
+  data: T | null
+  loading: boolean
+  error: Error | null
+  makeRequest: (prompt: string) => Promise<T | null>
+  reset: () => void
+}
+
+// Simple in-memory cache
+const cache: Record<string, any> = {}
+
+export function useAIRequest<T = any>({
+  endpoint = "/api/ai",
+  retries = 2,
+  timeout = 30000,
+  cacheResults = true,
+}: UseAIRequestOptions = {}): UseAIRequestResult<T> {
+  const [data, setData] = useState<T | null>(null)
+  const [loading, setLoading] = useState<boolean>(false)
+  const [error, setError] = useState<Error | null>(null)
+
+  const reset = useCallback(() => {
+    setData(null)
+    setError(null)
+  }, [])
 
   const makeRequest = useCallback(
-    async (task: string, content: string, prompt?: string) => {
-      if (!content.trim()) {
-        toast({
-          title: "Empty input",
-          description: "Please enter some text to process",
-          variant: "destructive",
-        })
-        return null
-      }
-
-      setIsLoading(true)
+    async (prompt: string): Promise<T | null> => {
+      setLoading(true)
       setError(null)
 
-      try {
-        const controller = new AbortController()
-        const timeoutId = setTimeout(() => controller.abort(), 30000) // 30 second timeout
+      // Check cache first if enabled
+      const cacheKey = `${endpoint}:${prompt}`
+      if (cacheResults && cache[cacheKey]) {
+        setData(cache[cacheKey])
+        setLoading(false)
+        return cache[cacheKey]
+      }
 
-        const response = await fetch("/api/ai", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            task,
-            content,
-            prompt,
-          }),
-          signal: controller.signal,
-        })
+      let attempts = 0
+      let result: T | null = null
 
-        clearTimeout(timeoutId)
+      while (attempts <= retries) {
+        try {
+          // Create an AbortController for timeout handling
+          const controller = new AbortController()
+          const timeoutId = setTimeout(() => controller.abort(), timeout)
 
-        const responseData = await response.json()
-
-        if (!response.ok) {
-          console.error(`Error processing ${task}:`, responseData)
-          const errorMessage = responseData.error || "An unknown error occurred"
-          setError(errorMessage)
-
-          if (options.onError) {
-            options.onError(errorMessage)
-          }
-
-          toast({
-            title: "Processing failed",
-            description: errorMessage,
-            variant: "destructive",
+          const response = await fetch(endpoint, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ prompt }),
+            signal: controller.signal,
           })
 
-          return null
-        }
+          clearTimeout(timeoutId)
 
-        let processedData = responseData.result
-
-        // If we need to parse JSON from the response
-        if (options.parseJson) {
-          const parsedData = extractJsonFromString(responseData.result)
-
-          if (!parsedData) {
-            const errorMessage = "Failed to parse the AI response. Please try again."
-            setError(errorMessage)
-
-            if (options.onError) {
-              options.onError(errorMessage)
-            }
-
-            toast({
-              title: "Processing error",
-              description: errorMessage,
-              variant: "destructive",
-            })
-
-            return null
+          if (!response.ok) {
+            const errorText = await response.text()
+            throw new Error(`API error (${response.status}): ${errorText}`)
           }
 
-          processedData = parsedData
+          result = await response.json()
+
+          // Store in cache if enabled
+          if (cacheResults) {
+            cache[cacheKey] = result
+          }
+
+          setData(result)
+          setLoading(false)
+          return result
+        } catch (err: any) {
+          attempts++
+
+          // If it's a timeout or we've exhausted retries, throw the error
+          if (err.name === "AbortError" || attempts > retries) {
+            const finalError = err.name === "AbortError" ? new Error(`Request timed out after ${timeout}ms`) : err
+
+            setError(finalError)
+            setLoading(false)
+            throw finalError
+          }
+
+          // Exponential backoff before retry
+          const delay = Math.min(1000 * 2 ** attempts, 10000)
+          await new Promise((resolve) => setTimeout(resolve, delay))
         }
-
-        setData(processedData)
-
-        if (options.onSuccess) {
-          options.onSuccess(processedData)
-        }
-
-        return processedData
-      } catch (error) {
-        console.error(`Error in ${task} request:`, error)
-
-        const errorMessage =
-          error instanceof Error && error.name === "AbortError"
-            ? "Request timed out. Please try again."
-            : "Network error. Please check your connection and try again."
-
-        setError(errorMessage)
-
-        if (options.onError) {
-          options.onError(errorMessage)
-        }
-
-        toast({
-          title: "Request failed",
-          description: errorMessage,
-          variant: "destructive",
-        })
-
-        return null
-      } finally {
-        setIsLoading(false)
       }
+
+      setLoading(false)
+      return result
     },
-    [toast, options],
+    [endpoint, retries, timeout, cacheResults],
   )
 
-  return {
-    isLoading,
-    error,
-    data,
-    makeRequest,
-    setError,
-    setData,
-  }
+  return { data, loading, error, makeRequest, reset }
 }

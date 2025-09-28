@@ -1,16 +1,16 @@
 {
-  "name": "my-v0-project",
+  "name": "edupilot",
   "version": "0.1.0",
   "private": true,
   "scripts": {
     "build": "next build",
     "dev": "next dev",
     "lint": "next lint",
-    "start": "next start"
+    "start": "next start",
+    "type-check": "tsc --noEmit"
   },
   "dependencies": {
     "@emotion/is-prop-valid": "latest",
-    "@hookform/resolvers": "^3.9.1",
     "@radix-ui/react-accordion": "latest",
     "@radix-ui/react-alert-dialog": "latest",
     "@radix-ui/react-aspect-ratio": "latest",
@@ -40,7 +40,7 @@
     "@radix-ui/react-tooltip": "latest",
     "@react-three/drei": "latest",
     "@react-three/fiber": "latest",
-    "autoprefixer": "^10.4.20",
+    "@types/three": "^0.158.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "latest",
@@ -55,11 +55,11 @@
     "input-otp": "latest",
     "jspdf": "latest",
     "lucide-react": "^0.454.0",
-    "next": "15.2.4",
+    "next": "14.2.16",
     "next-themes": "latest",
-    "react": "^19",
+    "react": "^18",
     "react-day-picker": "latest",
-    "react-dom": "^19",
+    "react-dom": "^18",
     "react-hook-form": "latest",
     "react-markdown": "latest",
     "react-native": "latest",
@@ -70,13 +70,15 @@
     "tailwindcss-animate": "^1.0.7",
     "three": "latest",
     "uuid": "latest",
-    "vaul": "latest",
-    "zod": "^3.24.1"
+    "vaul": "latest"
   },
   "devDependencies": {
     "@types/node": "^22",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
+    "autoprefixer": "^10.4.16",
+    "eslint": "^8.56.0",
+    "eslint-config-next": "14.0.4",
     "postcss": "^8.5",
     "tailwindcss": "^3.4.17",
     "typescript": "^5"

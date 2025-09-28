@@ -42,95 +42,43 @@ export function useAIRequest(options: UseAIRequestOptions = {}) {
       // Cancel any ongoing request
       cancelRequest()
 
-      // Add this near the top of the hook function
-      const maxRetries = 2
-      let retryCount = 0
+      setIsLoading(true)
+      setError(null)
 
-      const fetchData = async () => {
-        try {
-          setIsLoading(true)
-          setError(null)
+      // Create a new AbortController for this request
+      abortControllerRef.current = new AbortController()
 
-          while (retryCount <= maxRetries) {
-            try {
-              const response = await fetch("/api/ai", {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                },
-                body: JSON.stringify({
-                  task,
-                  content,
-                  prompt,
-                }),
-                // Add cache control
-                cache: "no-store",
-                signal: abortControllerRef.current ? abortControllerRef.current.signal : undefined,
-              })
+      try {
+        const response = await fetch("/api/ai", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            task,
+            content,
+            prompt,
+          }),
+          signal: abortControllerRef.current.signal,
+        })
 
-              if (!response.ok) {
-                throw new Error(`API request failed with status ${response.status}`)
-              }
+        const responseData = await response.json()
 
-              const responseData = await response.json()
-              let processedData = responseData.result
+        if (!response.ok) {
+          console.error(`Error processing ${task}:`, responseData)
 
-              // If we need to parse JSON from the response
-              if (options.parseJson) {
-                try {
-                  // First try direct JSON parsing
-                  processedData = JSON.parse(responseData.result)
-                } catch (e) {
-                  // If direct parsing fails, use the extraction utility
-                  const parsedData = extractJsonFromString(responseData.result)
+          let errorMessage = "An error occurred while processing your request."
 
-                  if (!parsedData) {
-                    const errorMessage = "Failed to parse the AI response. Please try again."
-                    setError(errorMessage)
-
-                    if (options.onError) {
-                      options.onError(errorMessage)
-                    }
-
-                    toast({
-                      title: "Processing error",
-                      description: errorMessage,
-                      variant: "destructive",
-                    })
-
-                    setIsLoading(false)
-                    return null
-                  }
-
-                  processedData = parsedData
-                }
-              }
-
-              setData(processedData)
-
-              if (options.onSuccess) {
-                options.onSuccess(processedData)
-              }
-
-              setIsLoading(false)
-              return processedData
-            } catch (err: any) {
-              if (retryCount === maxRetries) {
-                throw err
-              }
-              retryCount++
-              // Exponential backoff
-              await new Promise((resolve) => setTimeout(resolve, 1000 * Math.pow(2, retryCount)))
-            }
+          // Provide more specific error messages
+          if (response.status === 404) {
+            errorMessage = "The AI service is temporarily unavailable. Please try again later."
+          } else if (response.status === 429) {
+            errorMessage = "Too many requests. Please wait a moment and try again."
+          } else if (response.status >= 500) {
+            errorMessage = "Server error. Please try again in a few minutes."
+          } else if (responseData.error) {
+            errorMessage = responseData.error
           }
-        } catch (err: any) {
-          console.error("Error in AI request:", err)
-          const errorMessage =
-            err.name === "AbortError"
-              ? "Request timed out or was cancelled. Please try again."
-              : err instanceof Error
-                ? err.message
-                : "An unknown error occurred"
 
           setError(errorMessage)
 
@@ -139,22 +87,126 @@ export function useAIRequest(options: UseAIRequestOptions = {}) {
           }
 
           toast({
-            title: "Request failed",
+            title: "Processing failed",
             description: errorMessage,
             variant: "destructive",
           })
+
           setIsLoading(false)
           return null
         }
+
+        let processedData = responseData.result
+
+        // If we need to parse JSON from the response
+        if (options.parseJson) {
+          try {
+            // First try direct JSON parsing
+            processedData = JSON.parse(responseData.result)
+          } catch (e) {
+            // If direct parsing fails, use the extraction utility
+            const parsedData = extractJsonFromString(responseData.result)
+
+            if (!parsedData) {
+              const errorMessage = "Failed to parse the AI response. Please try again."
+              setError(errorMessage)
+
+              if (options.onError) {
+                options.onError(errorMessage)
+              }
+
+              toast({
+                title: "Processing error",
+                description: errorMessage,
+                variant: "destructive",
+              })
+
+              setIsLoading(false)
+              return null
+            }
+
+            processedData = parsedData
+          }
+        }
+
+        // Validate the data structure for specific tasks
+        if (task === "quiz" && options.parseJson) {
+          if (
+            !Array.isArray(processedData) ||
+            !processedData.every((q) => q.question && Array.isArray(q.options) && q.correctAnswer)
+          ) {
+            const errorMessage = "Invalid quiz format received. Please try again."
+            setError(errorMessage)
+
+            if (options.onError) {
+              options.onError(errorMessage)
+            }
+
+            toast({
+              title: "Invalid quiz format",
+              description: errorMessage,
+              variant: "destructive",
+            })
+
+            setIsLoading(false)
+            return null
+          }
+        }
+
+        if (task === "flashcards" && options.parseJson) {
+          if (!Array.isArray(processedData) || !processedData.every((f) => f.question && f.answer)) {
+            const errorMessage = "Invalid flashcards format received. Please try again."
+            setError(errorMessage)
+
+            if (options.onError) {
+              options.onError(errorMessage)
+            }
+
+            toast({
+              title: "Invalid flashcards format",
+              description: errorMessage,
+              variant: "destructive",
+            })
+
+            setIsLoading(false)
+            return null
+          }
+        }
+
+        setData(processedData)
+
+        if (options.onSuccess) {
+          options.onSuccess(processedData)
+        }
+
+        setIsLoading(false)
+        return processedData
+      } catch (error: any) {
+        console.error(`Error in ${task} request:`, error)
+
+        let errorMessage = "Network error. Please check your connection and try again."
+
+        if (error.name === "AbortError") {
+          errorMessage = "Request was cancelled."
+        } else if (error.message?.includes("timeout")) {
+          errorMessage = "Request timed out. Please try again."
+        }
+
+        setError(errorMessage)
+
+        if (options.onError) {
+          options.onError(errorMessage)
+        }
+
+        toast({
+          title: "Request failed",
+          description: errorMessage,
+          variant: "destructive",
+        })
+
+        setIsLoading(false)
+        return null
       }
-
-      // Cancel any ongoing request
-      cancelRequest()
-
-      // Create a new AbortController for this request
-      abortControllerRef.current = new AbortController()
-
-      return await fetchData()
     },
     [toast, options, cancelRequest],
   )

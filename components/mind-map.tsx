@@ -1,278 +1,189 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { ChevronLeft, RefreshCw } from "lucide-react"
-import { Canvas } from "@react-three/fiber"
-import { OrbitControls, Text, Line, Html } from "@react-three/drei"
-import { useToast } from "@/hooks/use-toast"
-import { extractJsonFromString } from "@/lib/extract-json"
-
-interface MindMapProps {
-  studyText: string
-  onBack: () => void
-}
-
-// Position can be either an array [x, y, z] or an object {x, y, z}
-type Position = [number, number, number] | { x: number; y: number; z: number }
+import { useEffect, useRef, useState } from "react"
+import { Canvas, useFrame, useThree } from "@react-three/fiber"
+import { Text, OrbitControls, Line } from "@react-three/drei"
+import { Vector3 } from "three"
+import type * as THREE from "three"
+import type { JSX } from "react/jsx-runtime"
 
 interface MindMapNode {
-  id: number | string
+  id: string
   text: string
-  position: Position
+  position: [number, number, number]
   children?: MindMapNode[]
 }
 
-// Updated interface to handle both formats
 interface MindMapData {
-  center: string | MindMapNode
-  nodes?: MindMapNode[]
+  center: string
+  nodes: MindMapNode[]
 }
 
-// Helper function to normalize position to array format
-function normalizePosition(position: Position): [number, number, number] {
-  if (Array.isArray(position)) {
-    return position
-  }
-  return [position.x, position.y, position.z]
+interface MindMapProps {
+  data: MindMapData | null
+  className?: string
 }
 
-export function MindMap({ studyText, onBack }: MindMapProps) {
-  const [mindMap, setMindMap] = useState<MindMapData | null>(null)
-  const [isLoading, setIsLoading] = useState(false)
-  const { toast } = useToast()
+function NodeComponent({ node, level = 0 }: { node: MindMapNode; level?: number }) {
+  const meshRef = useRef<THREE.Mesh>(null)
+  const [hovered, setHovered] = useState(false)
 
-  const generateMindMap = async () => {
-    if (!studyText.trim()) {
-      toast({
-        title: "Empty input",
-        description: "Please enter some text to generate a mind map",
-        variant: "destructive",
-      })
-      return
+  useFrame((state) => {
+    if (meshRef.current) {
+      meshRef.current.rotation.y = Math.sin(state.clock.elapsedTime * 0.5) * 0.1
     }
+  })
 
-    setIsLoading(true)
-
-    try {
-      const response = await fetch("/api/ai", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          task: "mindmap",
-          content: studyText,
-        }),
-      })
-
-      if (!response.ok) {
-        throw new Error("Failed to generate mind map")
-      }
-
-      const data = await response.json()
-
-      // Use the utility function to extract JSON from the response
-      const mindMapData = extractJsonFromString(data.result)
-
-      if (!mindMapData) {
-        console.error("Failed to parse mind map data:", data.result)
-        toast({
-          title: "Processing error",
-          description: "There was an error processing the AI response. Please try again.",
-          variant: "destructive",
-        })
-        setIsLoading(false)
-        return
-      }
-
-      // Handle both formats of mind map data
-      if (typeof mindMapData.center === "string" && Array.isArray(mindMapData.nodes)) {
-        // Original format with center string and nodes array
-        setMindMap(mindMapData)
-      } else if (typeof mindMapData.center === "object" && mindMapData.center.text && mindMapData.center.children) {
-        // New format with center as root node with children
-        setMindMap({
-          center: mindMapData.center.text,
-          nodes: mindMapData.center.children,
-        })
-      } else {
-        console.error("Invalid mind map format:", mindMapData)
-        toast({
-          title: "Invalid mind map format",
-          description: "The AI generated an invalid mind map format. Please try again.",
-          variant: "destructive",
-        })
-        setIsLoading(false)
-        return
-      }
-    } catch (error) {
-      console.error("Error generating mind map:", error)
-      toast({
-        title: "Generation failed",
-        description: "There was an error generating the mind map. Please try again.",
-        variant: "destructive",
-      })
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  useEffect(() => {
-    if (studyText.trim()) {
-      generateMindMap()
-    }
-  }, [])
-
-  if (isLoading) {
-    return (
-      <div className="flex flex-col items-center justify-center py-12">
-        <div className="mb-4 h-12 w-12 animate-spin rounded-full border-4 border-primary border-t-transparent"></div>
-        <p className="text-lg font-medium">Generating mind map...</p>
-        <p className="text-sm text-muted-foreground">This may take a moment</p>
-      </div>
-    )
-  }
-
-  if (!mindMap && !isLoading) {
-    return (
-      <div className="flex flex-col items-center justify-center py-12">
-        <p className="mb-4 text-lg font-medium">No mind map available</p>
-        <Button onClick={generateMindMap}>Generate Mind Map</Button>
-        <Button variant="outline" onClick={onBack} className="mt-4">
-          Back
-        </Button>
-      </div>
-    )
-  }
-
-  // Get the center text regardless of format
-  const centerText = typeof mindMap?.center === "string" ? mindMap.center : mindMap?.center.text
-
-  // Get the nodes array regardless of format
-  const nodes = Array.isArray(mindMap?.nodes)
-    ? mindMap.nodes
-    : typeof mindMap?.center === "object" && Array.isArray(mindMap?.center.children)
-      ? mindMap.center.children
-      : []
+  const colors = ["#3b82f6", "#8b5cf6", "#10b981", "#f59e0b", "#ef4444"]
+  const color = colors[level % colors.length]
 
   return (
-    <div className="flex flex-col">
-      <div className="mb-6 flex items-center justify-between">
-        <Button variant="outline" onClick={onBack}>
-          <ChevronLeft className="mr-2 h-4 w-4" /> Back
-        </Button>
-        <Button variant="outline" size="icon" onClick={generateMindMap}>
-          <RefreshCw className="h-4 w-4" />
-        </Button>
+    <group position={node.position}>
+      <mesh
+        ref={meshRef}
+        onPointerOver={() => setHovered(true)}
+        onPointerOut={() => setHovered(false)}
+        scale={hovered ? 1.2 : 1}
+      >
+        <sphereGeometry args={[0.3, 16, 16]} />
+        <meshStandardMaterial color={color} />
+      </mesh>
+      <Text
+        position={[0, -0.8, 0]}
+        fontSize={0.3}
+        color={color}
+        anchorX="center"
+        anchorY="middle"
+        maxWidth={3}
+        textAlign="center"
+      >
+        {node.text}
+      </Text>
+      {node.children?.map((child, index) => (
+        <NodeComponent key={child.id || index} node={child} level={level + 1} />
+      ))}
+    </group>
+  )
+}
+
+function ConnectionLines({ nodes }: { nodes: MindMapNode[] }) {
+  const lines: JSX.Element[] = []
+
+  const addLines = (parentNode: MindMapNode, level = 0) => {
+    if (parentNode.children) {
+      parentNode.children.forEach((child, index) => {
+        const start = new Vector3(...parentNode.position)
+        const end = new Vector3(...child.position)
+
+        lines.push(
+          <Line
+            key={`${parentNode.id}-${child.id || index}`}
+            points={[start, end]}
+            color="#64748b"
+            lineWidth={2}
+            opacity={0.6}
+          />,
+        )
+
+        addLines(child, level + 1)
+      })
+    }
+  }
+
+  nodes.forEach((node) => addLines(node))
+
+  return <>{lines}</>
+}
+
+function CameraController() {
+  const { camera } = useThree()
+
+  useEffect(() => {
+    camera.position.set(0, 0, 10)
+    camera.lookAt(0, 0, 0)
+  }, [camera])
+
+  return null
+}
+
+export function MindMap({ data, className = "" }: MindMapProps) {
+  if (!data || !data.nodes || data.nodes.length === 0) {
+    return (
+      <div className={`flex items-center justify-center h-96 bg-muted/50 rounded-lg ${className}`}>
+        <div className="text-center">
+          <div className="text-4xl mb-4">🧠</div>
+          <p className="text-muted-foreground">No mind map data available</p>
+          <p className="text-sm text-muted-foreground mt-2">
+            Generate a mind map from your study content to see it visualized here
+          </p>
+        </div>
       </div>
+    )
+  }
 
-      <Card className="overflow-hidden">
-        <CardHeader>
-          <CardTitle>Mind Map: {centerText}</CardTitle>
-        </CardHeader>
-        <CardContent className="p-0">
-          <div className="h-[600px] w-full">
-            <Canvas camera={{ position: [0, 0, 10], fov: 60 }}>
-              <ambientLight intensity={0.5} />
-              <OrbitControls
-                enableZoom={true}
-                enablePan={true}
-                enableRotate={true}
-                zoomSpeed={0.5}
-                panSpeed={0.5}
-                rotateSpeed={0.5}
-              />
+  // Ensure all nodes have valid positions
+  const processedNodes = data.nodes.map((node, index) => ({
+    ...node,
+    id: node.id || `node-${index}`,
+    position:
+      Array.isArray(node.position) && node.position.length === 3
+        ? (node.position as [number, number, number])
+        : ([
+            Math.cos((index * 2 * Math.PI) / data.nodes.length) * 3,
+            Math.sin((index * 2 * Math.PI) / data.nodes.length) * 3,
+            0,
+          ] as [number, number, number]),
+  }))
 
-              {/* Center node */}
-              <group position={[0, 0, 0]}>
-                <mesh>
-                  <circleGeometry args={[1, 32]} />
-                  <meshStandardMaterial color="#6d28d9" />
-                </mesh>
-                <Text
-                  position={[0, 0, 0.1]}
-                  fontSize={0.4}
-                  color="white"
-                  anchorX="center"
-                  anchorY="middle"
-                  font="/fonts/Inter-Bold.ttf"
-                >
-                  {centerText}
-                </Text>
-              </group>
+  return (
+    <div className={`h-96 bg-background rounded-lg border ${className}`}>
+      <Canvas camera={{ position: [0, 0, 10], fov: 75 }}>
+        <CameraController />
+        <ambientLight intensity={0.6} />
+        <pointLight position={[10, 10, 10]} intensity={0.8} />
+        <pointLight position={[-10, -10, -10]} intensity={0.4} />
 
-              {/* Main concept nodes and connections */}
-              {nodes.map((node) => {
-                const nodePosition = normalizePosition(node.position)
+        {/* Center node */}
+        <group position={[0, 0, 0]}>
+          <mesh>
+            <sphereGeometry args={[0.5, 20, 20]} />
+            <meshStandardMaterial color="#1e40af" />
+          </mesh>
+          <Text
+            position={[0, -1.2, 0]}
+            fontSize={0.4}
+            color="#1e40af"
+            anchorX="center"
+            anchorY="middle"
+            maxWidth={4}
+            textAlign="center"
+            fontWeight="bold"
+          >
+            {data.center}
+          </Text>
+        </group>
 
-                return (
-                  <group key={node.id.toString()}>
-                    {/* Line from center to main concept */}
-                    <Line points={[[0, 0, 0], nodePosition]} color="#8b5cf6" lineWidth={3} />
+        {/* Render nodes */}
+        {processedNodes.map((node, index) => (
+          <NodeComponent key={node.id} node={node} level={1} />
+        ))}
 
-                    {/* Main concept node */}
-                    <group position={nodePosition}>
-                      <mesh>
-                        <circleGeometry args={[0.8, 32]} />
-                        <meshStandardMaterial color="#8b5cf6" />
-                      </mesh>
-                      <Text
-                        position={[0, 0, 0.1]}
-                        fontSize={0.3}
-                        color="white"
-                        anchorX="center"
-                        anchorY="middle"
-                        font="/fonts/Inter-Regular.ttf"
-                      >
-                        {node.text}
-                      </Text>
-                    </group>
+        {/* Connection lines from center to main nodes */}
+        {processedNodes.map((node, index) => (
+          <Line
+            key={`center-${node.id}`}
+            points={[new Vector3(0, 0, 0), new Vector3(...node.position)]}
+            color="#374151"
+            lineWidth={3}
+            opacity={0.8}
+          />
+        ))}
 
-                    {/* Sub-concept nodes and connections */}
-                    {node.children?.map((child) => {
-                      const childPosition = normalizePosition(child.position)
+        {/* Connection lines between nodes */}
+        <ConnectionLines nodes={processedNodes} />
 
-                      return (
-                        <group key={child.id.toString()}>
-                          {/* Line from main concept to sub-concept */}
-                          <Line points={[nodePosition, childPosition]} color="#a78bfa" lineWidth={2} />
-
-                          {/* Sub-concept node */}
-                          <group position={childPosition}>
-                            <mesh>
-                              <circleGeometry args={[0.6, 32]} />
-                              <meshStandardMaterial color="#a78bfa" />
-                            </mesh>
-                            <Text
-                              position={[0, 0, 0.1]}
-                              fontSize={0.25}
-                              color="white"
-                              anchorX="center"
-                              anchorY="middle"
-                              font="/fonts/Inter-Regular.ttf"
-                            >
-                              {child.text}
-                            </Text>
-                          </group>
-                        </group>
-                      )
-                    })}
-                  </group>
-                )
-              })}
-
-              {/* Instructions overlay */}
-              <Html position={[-5, -4, 0]}>
-                <div className="rounded-md bg-background/80 p-2 text-xs backdrop-blur-sm">
-                  <p>Drag to pan | Scroll to zoom | Right-click to rotate</p>
-                </div>
-              </Html>
-            </Canvas>
-          </div>
-        </CardContent>
-      </Card>
+        <OrbitControls enablePan={true} enableZoom={true} enableRotate={true} minDistance={5} maxDistance={20} />
+      </Canvas>
     </div>
   )
 }
